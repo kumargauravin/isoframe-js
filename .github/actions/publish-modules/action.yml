@@ -51,7 +51,21 @@ runs:
       run: |
         set -euo pipefail
 
-        mapfile -t packages < <(node -e "const value = JSON.parse(process.env.PACKAGES_JSON); if (!Array.isArray(value)) throw new Error('packages must be a JSON array'); for (const item of value) { if (typeof item !== 'string' || !item.trim()) throw new Error('package path entries must be non-empty strings'); console.log(item); }")
+        mapfile -t packages < <(node <<'NODE'
+        const value = JSON.parse(process.env.PACKAGES_JSON);
+
+        if (!Array.isArray(value)) {
+          throw new Error("Invalid 'packages' input: expected a JSON array of package paths");
+        }
+
+        for (const item of value) {
+          if (typeof item !== 'string' || !item.trim()) {
+            throw new Error("Invalid 'packages' input: each package path must be a non-empty string");
+          }
+          console.log(item);
+        }
+        NODE
+        )
 
         for pkg_dir in "${packages[@]}"; do
           if [ ! -f "./${pkg_dir}/package.json" ]; then

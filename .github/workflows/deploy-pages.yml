@@ -78,14 +78,7 @@ jobs:
           set -euo pipefail
           mkdir -p _site
 
-          if [ -f apps/demo-landing/index.html ]; then
-            cp apps/demo-landing/index.html _site/index.html
-          else
-            cat > _site/index.html <<'HTML'
-            <!doctype html>
-            <html><body><h1>isoframe-js demos</h1><p>No landing template found.</p></body></html>
-            HTML
-          fi
+          cp apps/demo-landing/index.html _site/index.html
 
           for route in nextjs angular vue; do
             src="downloaded-demos/demo-${route}"
