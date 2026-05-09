@@ -180,7 +180,7 @@ export default function Home() {
         ].map(({ label, value }) => (
           <Grid key={label} size={{ xs: 6, sm: 4, md: 2.4 }}>
             <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="h5" color="primary" fontWeight={700}>
+              <Typography variant="h5" color="primary" sx={{ fontWeight: 700 }}>
                 {value}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -193,7 +193,7 @@ export default function Home() {
 
       {/* Tabs */}
       <Paper sx={{ p: 3 }}>
-        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2, gap: 1 }}>
+        <Stack direction="row" spacing={1} sx={{ mb: 2, gap: 1, flexWrap: 'wrap' }}>
           {tabs.map(({ key, label }) => (
             <Button
               key={key}
@@ -214,7 +214,7 @@ export default function Home() {
             <Typography variant="h6" gutterBottom>
               All Employees <Chip label={`${employeeFrame.shape[0]} rows`} size="small" color="primary" sx={{ ml: 1 }} />
             </Typography>
-            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
               Sorted client-side by AG Grid. Full dataset loaded via <code>to_list()</code>.
             </Typography>
             <div style={{ height: 500 }}>
@@ -284,7 +284,7 @@ export default function Home() {
             <Typography variant="h6" gutterBottom>
               query() + sort_values() + paginate()
             </Typography>
-            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" sx={{ mb: 2, gap: 1 }}>
+            <Stack direction="row" spacing={2} sx={{ mb: 2, gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
               <FormControl size="small" sx={{ minWidth: 160 }}>
                 <InputLabel>Department</InputLabel>
                 <Select
@@ -340,7 +340,7 @@ export default function Home() {
               </div>
             )}
 
-            <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center" sx={{ mt: 2 }}>
+            <Stack direction="row" spacing={1} sx={{ mt: 2, justifyContent: 'flex-end', alignItems: 'center' }}>
               <Button size="small" variant="outlined" onClick={() => setPageNum(1)} disabled={pageNum === 1}>«</Button>
               <Button size="small" variant="outlined" onClick={() => setPageNum((p) => p - 1)} disabled={pageNum === 1}>‹</Button>
               <Typography variant="body2">Page {pageNum} of {totalPages}</Typography>
@@ -408,7 +408,7 @@ function IsoJsonTab() {
         <Typography variant="h6" gutterBottom>
           CSV → IsoFrame <Chip label="@nice-tools/isocsv" size="small" color="secondary" />
         </Typography>
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
           Edit the CSV below — parsed live, zero dependencies.
         </Typography>
         <textarea
@@ -436,7 +436,7 @@ function IsoJsonTab() {
         <Typography variant="h6" gutterBottom>
           CosmosDB JSON → IsoFrame <Chip label="@nice-tools/isojson" size="small" color="secondary" />
         </Typography>
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
           Paste CosmosDB documents. System fields (_rid, _ts, etc.) are stripped. Nested objects are flattened with dot-notation.
         </Typography>
         <textarea
