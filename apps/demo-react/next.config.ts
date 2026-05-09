@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@nice-tools/isoframe', '@nice-tools/isocsv', '@nice-tools/isoframe-react', '@nice-tools/isojson'],
   output: 'export',
   basePath,
-  assetPrefix: basePath || undefined,
+  assetPrefix: basePath ? basePath : undefined,
 };
 
 export default nextConfig;
