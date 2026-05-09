@@ -35,10 +35,10 @@ export function normalizeInput(input: FrameInput): ReadonlyArray<Row> {
 /** Convert row array to column-major object */
 export function toColumnMap(rows: ReadonlyArray<Row>): ColumnMap {
   if (rows.length === 0) return {};
-  const keys = Object.keys(rows[0]);
+  const keys = inferColumns(rows);
   const result: ColumnMap = {};
   for (const k of keys) {
-    result[k] = rows.map((r) => r[k] as Scalar);
+    result[k] = rows.map((r) => (k in r ? r[k] : null) as Scalar);
   }
   return result;
 }

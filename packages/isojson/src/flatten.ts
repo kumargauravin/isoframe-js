@@ -12,60 +12,62 @@ export function flatten_json(obj: JsonObject, options: FlattenOptions = {}): Fla
   const { separator = '.', maxDepth = Infinity, exclude = [], arrayAsCsv = false } = options;
   const result: FlatRow = {};
 
+  function shouldWrite(prefix: string): boolean {
+    return !!prefix && !exclude.includes(prefix);
+  }
+
+  function writeIfAllowed(prefix: string, value: FlatRow[string]): void {
+    if (shouldWrite(prefix)) result[prefix] = value;
+  }
+
+  function handleArray(current: JsonValue[], prefix: string): void {
+    if (current.length === 0) {
+      writeIfAllowed(prefix, null);
+      return;
+    }
+    if (!shouldWrite(prefix)) return;
+    const allPrimitive = current.every((v) => v === null || typeof v !== 'object');
+    if (allPrimitive) {
+      result[prefix] = arrayAsCsv
+        ? current.filter((v) => v !== null).join(',')
+        : JSON.stringify(current);
+    } else {
+      result[prefix] = JSON.stringify(current);
+    }
+  }
+
+  function handleObject(current: JsonObject, prefix: string, depth: number): void {
+    const keys = Object.keys(current);
+    if (keys.length === 0) {
+      writeIfAllowed(prefix, null);
+      return;
+    }
+    for (const key of keys) {
+      const newKey = prefix ? `${prefix}${separator}${key}` : key;
+      recurse(current[key], newKey, depth + 1);
+    }
+  }
+
   function recurse(current: JsonValue, prefix: string, depth: number): void {
-    if (depth > maxDepth) {
-      if (prefix && !exclude.includes(prefix)) {
-        result[prefix] = typeof current === 'object' ? JSON.stringify(current) : (current as any);
-      }
-      return;
-    }
-
     if (current === null || current === undefined) {
-      if (prefix && !exclude.includes(prefix)) result[prefix] = null;
+      writeIfAllowed(prefix, null);
       return;
     }
-
+    if (depth > maxDepth) {
+      const val = typeof current === 'object' ? JSON.stringify(current) : (current as FlatRow[string]);
+      writeIfAllowed(prefix, val);
+      return;
+    }
     if (Array.isArray(current)) {
-      if (current.length === 0) {
-        if (prefix && !exclude.includes(prefix)) result[prefix] = null;
-        return;
-      }
-      // Array of primitives
-      const allPrimitive = current.every(
-        (v) => v === null || typeof v !== 'object',
-      );
-      if (allPrimitive) {
-        if (prefix && !exclude.includes(prefix)) {
-          result[prefix] = arrayAsCsv
-            ? current.filter((v) => v !== null).join(',')
-            : JSON.stringify(current);
-        }
-      } else {
-        // Array of objects — stringify the whole thing
-        if (prefix && !exclude.includes(prefix)) {
-          result[prefix] = JSON.stringify(current);
-        }
-      }
+      handleArray(current, prefix);
       return;
     }
-
     if (typeof current === 'object') {
-      const keys = Object.keys(current as JsonObject);
-      if (keys.length === 0) {
-        if (prefix && !exclude.includes(prefix)) result[prefix] = null;
-        return;
-      }
-      for (const key of keys) {
-        const newKey = prefix ? `${prefix}${separator}${key}` : key;
-        recurse((current as JsonObject)[key], newKey, depth + 1);
-      }
+      handleObject(current as JsonObject, prefix, depth);
       return;
     }
-
     // Primitive
-    if (prefix && !exclude.includes(prefix)) {
-      result[prefix] = current as any;
-    }
+    writeIfAllowed(prefix, current as FlatRow[string]);
   }
 
   recurse(obj, '', 0);
