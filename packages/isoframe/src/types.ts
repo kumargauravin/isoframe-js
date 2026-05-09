@@ -119,10 +119,10 @@ export interface ISeries {
   readonly dtype: Dtype;
   readonly values: Scalar[];
   unique(): Scalar[];
-  valueCounts(): Row[];
+  value_counts(): Row[];
   sum(): number;
   mean(): number;
   min(): Scalar;
   max(): Scalar;
-  toArray(): Scalar[];
+  to_array(): Scalar[];
 }

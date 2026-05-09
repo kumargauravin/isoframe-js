@@ -17,7 +17,7 @@ export class Series implements ISeries {
     return [...new Set(this.values)];
   }
 
-  valueCounts(): Row[] {
+  value_counts(): Row[] {
     const counts = new Map<Scalar, number>();
     for (const v of this.values) {
       counts.set(v, (counts.get(v) ?? 0) + 1);
@@ -46,7 +46,7 @@ export class Series implements ISeries {
     return nums.length ? Math.max(...nums) : null;
   }
 
-  toArray(): Scalar[] {
+  to_array(): Scalar[] {
     return [...this.values];
   }
 }
