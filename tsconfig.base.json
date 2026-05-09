@@ -1,0 +1,29 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": true,
+    "moduleResolution": "bundler",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@nice-tools/isoframe": ["packages/isoframe/src/index.ts"],
+      "@nice-tools/isoframe/join": ["packages/isoframe/src/operations/join.ts"],
+      "@nice-tools/isoframe/groupBy": ["packages/isoframe/src/operations/groupBy.ts"],
+      "@nice-tools/isoframe/filter": ["packages/isoframe/src/operations/filter.ts"],
+      "@nice-tools/isoframe/sort": ["packages/isoframe/src/operations/sort.ts"],
+      "@nice-tools/isoframe/paginate": ["packages/isoframe/src/operations/paginate.ts"],
+      "@nice-tools/isocsv": ["packages/isocsv/src/index.ts"],
+      "@nice-tools/isoframe-react": ["packages/isoframe-react/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}
