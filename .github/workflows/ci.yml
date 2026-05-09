@@ -12,25 +12,80 @@ permissions:
   contents: read
 
 jobs:
-  ci:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup monorepo
+        uses: ./.github/actions/setup-monorepo
         with:
           node-version: '22'
-
-      - name: Install dependencies
-        run: npm ci
+          install-command: npm ci
 
       - name: Lint
         run: npm run lint
 
-      - name: Build libraries
-        run: npm run build
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup monorepo
+        uses: ./.github/actions/setup-monorepo
+        with:
+          node-version: '22'
+          install-command: npm ci
 
       - name: Test
         run: npm run test
+
+  build-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup monorepo
+        uses: ./.github/actions/setup-monorepo
+        with:
+          node-version: '22'
+          install-command: npm ci
+
+      - name: Build libraries
+        run: npx nx run-many --target=build --projects=@nice-tools/isoframe,@nice-tools/isocsv,@nice-tools/isojson,@nice-tools/isoframe-react
+
+  build-demos:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - demo: demo-react
+            workspace: demo-react
+            output: apps/demo-react/out
+            route: nextjs
+          - demo: demo-angular
+            workspace: demo-angular
+            output: apps/demo-angular/dist/demo-angular/browser
+            route: angular
+          - demo: demo-vue
+            workspace: demo-vue
+            output: apps/demo-vue/dist
+            route: vue
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build demo
+        uses: ./.github/actions/deploy-demo
+        with:
+          node-version: '22'
+          install-command: npm ci
+          demo-name: ${{ matrix.demo }}
+          workspace-name: ${{ matrix.workspace }}
+          build-command: build
+          output-path: ${{ matrix.output }}
+          build-packages-command: npx nx run-many --target=build --projects=@nice-tools/isoframe,@nice-tools/isocsv,@nice-tools/isojson,@nice-tools/isoframe-react

@@ -1,0 +1,32 @@
+name: Setup monorepo
+description: Standardized Node.js and workspace dependency setup for monorepos
+inputs:
+  node-version:
+    description: Node.js version to use
+    required: false
+    default: '22'
+  install-command:
+    description: Dependency install command
+    required: false
+    default: npm ci
+  cache-key:
+    description: Optional cache key suffix (reserved for future usage)
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+        cache-dependency-path: package-lock.json
+
+    - name: Install dependencies
+      shell: bash
+      run: ${{ inputs.install-command }}
+
+    - name: Verify Nx CLI
+      shell: bash
+      run: npx nx --version

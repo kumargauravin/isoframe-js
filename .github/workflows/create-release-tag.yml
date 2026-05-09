@@ -4,13 +4,25 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g. 1.0.0)'
+        description: Version to release (e.g. 1.2.0)
         required: true
-        default: '1.0.0'
+        default: 1.0.0
       release_notes:
-        description: 'Release notes'
+        description: Release notes
         required: false
-        default: 'New release'
+        default: New release
+      bump-strategy:
+        description: Version bump strategy
+        required: true
+        type: choice
+        default: monorepo
+        options:
+          - single
+          - monorepo
+      package-path:
+        description: Package path used when bump-strategy=single
+        required: false
+        default: packages/isoframe
 
 jobs:
   create-tag:
@@ -28,19 +40,39 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Bump version in all packages
+      - name: Bump versions
         run: |
-          for pkg in packages/isoframe packages/isocsv packages/isojson packages/isoframe-react; do
+          set -euo pipefail
+          if [ "${{ github.event.inputs.bump-strategy }}" = "single" ]; then
+            pkg="${{ github.event.inputs.package-path }}"
+            if [ ! -f "$pkg/package.json" ]; then
+              echo "Package not found: $pkg"
+              exit 1
+            fi
             (cd "$pkg" && npm version ${{ github.event.inputs.version }} --no-git-tag-version)
             git add "$pkg/package.json"
-          done
-          git commit -m "chore: bump version to ${{ github.event.inputs.version }}"
-          git push origin main
+          else
+            for pkg in packages/isoframe packages/isocsv packages/isojson packages/isoframe-react; do
+              (cd "$pkg" && npm version ${{ github.event.inputs.version }} --no-git-tag-version)
+              git add "$pkg/package.json"
+            done
+          fi
+
+          if git diff --cached --quiet; then
+            echo "No version changes detected; skipping commit."
+          else
+            git commit -m "chore: bump version to ${{ github.event.inputs.version }}"
+            git push origin main
+          fi
 
       - name: Create and push tag
         run: |
-          git tag v${{ github.event.inputs.version }}
-          git push origin v${{ github.event.inputs.version }}
+          if git rev-parse "v${{ github.event.inputs.version }}" >/dev/null 2>&1; then
+            echo "Tag v${{ github.event.inputs.version }} already exists"
+          else
+            git tag v${{ github.event.inputs.version }}
+            git push origin v${{ github.event.inputs.version }}
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

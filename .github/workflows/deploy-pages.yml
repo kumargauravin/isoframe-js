@@ -1,4 +1,4 @@
-name: Deploy Demo to GitHub Pages
+name: Deploy Demos to GitHub Pages
 
 on:
   push:
@@ -12,36 +12,96 @@ permissions:
   id-token: write
 
 concurrency:
-  group: 'pages'
+  group: pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-demos:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - demo: demo-react
+            workspace: demo-react
+            output: apps/demo-react/out
+            route: nextjs
+          - demo: demo-angular
+            workspace: demo-angular
+            output: apps/demo-angular/dist/demo-angular/browser
+            route: angular
+          - demo: demo-vue
+            workspace: demo-vue
+            output: apps/demo-vue/dist
+            route: vue
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build demo
+        id: build_demo
+        uses: ./.github/actions/deploy-demo
+        with:
+          node-version: '22'
+          install-command: npm ci
+          demo-name: ${{ matrix.demo }}
+          workspace-name: ${{ matrix.workspace }}
+          build-command: build
+          output-path: ${{ matrix.output }}
+          base-path: /isoframe-js/${{ matrix.route }}
+          build-packages-command: npx nx run-many --target=build --projects=@nice-tools/isoframe,@nice-tools/isocsv,@nice-tools/isojson,@nice-tools/isoframe-react
+
+      - name: Upload demo artifact
+        if: steps.build_demo.outputs.skipped == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-${{ matrix.route }}
+          path: ${{ steps.build_demo.outputs.artifact-path }}
+
+  combine-artifacts:
+    needs: build-demos
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Download demo artifacts
+        uses: actions/download-artifact@v4
         with:
-          node-version: '22'
+          path: downloaded-demos
+          pattern: demo-*
+          if-no-files-found: warn
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Combine demos for pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _site
 
-      - name: Build static demo
-        env:
-          NEXT_PUBLIC_BASE_PATH: /isoframe-js
-        run: npm run build --workspace demo-react
+          if [ -f apps/demo-landing/index.html ]; then
+            cp apps/demo-landing/index.html _site/index.html
+          else
+            cat > _site/index.html <<'HTML'
+            <!doctype html>
+            <html><body><h1>isoframe-js demos</h1><p>No landing template found.</p></body></html>
+            HTML
+          fi
+
+          for route in nextjs angular vue; do
+            src="downloaded-demos/demo-${route}"
+            if [ -d "$src" ]; then
+              mkdir -p "_site/${route}"
+              cp -R "$src"/. "_site/${route}/"
+            fi
+          done
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/demo-react/out
+          path: _site
 
   deploy:
-    needs: build
+    needs: combine-artifacts
     runs-on: ubuntu-latest
     environment:
       name: github-pages
