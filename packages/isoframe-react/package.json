@@ -1,0 +1,25 @@
+{
+  "name": "@nice-tools/isoframe-react",
+  "version": "0.1.0",
+  "description": "React 19 hooks for @nice-tools/isoframe",
+  "keywords": ["react", "dataframe", "hooks", "dashboard"],
+  "license": "MIT",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/types/index.d.ts"
+    }
+  },
+  "sideEffects": false,
+  "peerDependencies": {
+    "@nice-tools/isoframe": "^0.1.0",
+    "react": "^19.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json && tsc -p tsconfig.cjs.json"
+  }
+}

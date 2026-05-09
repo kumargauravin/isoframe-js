@@ -1,0 +1,51 @@
+{
+  "name": "@nice-tools/isoframe",
+  "version": "0.1.0",
+  "description": "Lightweight isomorphic (Node/Browser) DataFrame for dashboarding and complex JSON joins",
+  "keywords": ["dataframe", "data", "pandas", "danfo", "dashboard", "isomorphic", "cosmosdb"],
+  "license": "MIT",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./join": {
+      "import": "./dist/esm/operations/join.js",
+      "require": "./dist/cjs/operations/join.js",
+      "types": "./dist/types/operations/join.d.ts"
+    },
+    "./groupBy": {
+      "import": "./dist/esm/operations/groupBy.js",
+      "require": "./dist/cjs/operations/groupBy.js",
+      "types": "./dist/types/operations/groupBy.d.ts"
+    },
+    "./filter": {
+      "import": "./dist/esm/operations/filter.js",
+      "require": "./dist/cjs/operations/filter.js",
+      "types": "./dist/types/operations/filter.d.ts"
+    },
+    "./sort": {
+      "import": "./dist/esm/operations/sort.js",
+      "require": "./dist/cjs/operations/sort.js",
+      "types": "./dist/types/operations/sort.d.ts"
+    },
+    "./paginate": {
+      "import": "./dist/esm/operations/paginate.js",
+      "require": "./dist/cjs/operations/paginate.js",
+      "types": "./dist/types/operations/paginate.d.ts"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json && tsc -p tsconfig.cjs.json",
+    "test": "vitest run",
+    "lint": "eslint src --ext .ts"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0"
+  }
+}
