@@ -66,23 +66,23 @@ export interface IIsoFrame {
   rename(map: Record<string, string>): IIsoFrame;
   mutate(key: string, fn: (row: Row, index: number) => Scalar): IIsoFrame;
   apply(fn: (row: Row, index: number) => Row): IIsoFrame;
-  setIndex(key: string): IIsoFrame;
-  resetIndex(): IIsoFrame;
+  set_index(key: string): IIsoFrame;
+  reset_index(): IIsoFrame;
 
   // Missing value handling
-  isNa(): IIsoFrame;
-  notNa(): IIsoFrame;
-  dropNa(keys?: string[]): IIsoFrame;
-  fillNa(value: Scalar | Record<string, Scalar>, keys?: string[]): IIsoFrame;
+  is_na(): IIsoFrame;
+  not_na(): IIsoFrame;
+  drop_na(keys?: string[]): IIsoFrame;
+  fill_na(value: Scalar | Record<string, Scalar>, keys?: string[]): IIsoFrame;
 
   // Sorting & pagination
-  sortBy(key: string, order?: SortOrder): IIsoFrame;
+  sort_by(key: string, order?: SortOrder): IIsoFrame;
   paginate(pageNumber: number, pageSize: number): IIsoFrame;
 
   // Async operations
   where(predicate: (row: Row, index: number) => boolean): Promise<IIsoFrame>;
   join(other: IIsoFrame | Row[], primaryKey: string, foreignKey: string, type?: JoinType): Promise<IIsoFrame>;
-  groupBy(keys: string | string[]): Promise<IGroupedFrame>;
+  group_by(keys: string | string[]): Promise<IGroupedFrame>;
 
   // Reshaping
   pivot(index: string, columns: string, values: string, aggFn?: AggFnName): Promise<IIsoFrame>;
@@ -93,8 +93,8 @@ export interface IIsoFrame {
   loc(indices: number[]): IIsoFrame;
 
   // Export
-  toArray(): Row[];
-  toObject(): ColumnMap;
+  to_array(): Row[];
+  to_object(): ColumnMap;
 
   // Static
   // concat is on the class, not the instance
