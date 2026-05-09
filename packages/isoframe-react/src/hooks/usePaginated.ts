@@ -14,9 +14,11 @@ export function usePaginated(
 ): UsePaginatedResult {
   return useMemo(() => {
     if (!frame) return { page: null, totalPages: 0, totalRows: 0 };
+    const safePageSize = pageSize > 0 ? Math.floor(pageSize) : 20;
     const totalRows = frame.shape[0];
-    const totalPages = Math.ceil(totalRows / pageSize);
-    const page = frame.paginate(pageNumber, pageSize);
+    const totalPages = Math.ceil(totalRows / safePageSize);
+    const clampedPage = Math.max(1, Math.min(pageNumber, totalPages || 1));
+    const page = frame.paginate(clampedPage, safePageSize);
     return { page, totalPages, totalRows };
   }, [frame, pageNumber, pageSize]);
 }

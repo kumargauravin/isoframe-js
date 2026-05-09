@@ -115,8 +115,12 @@ export default function Home() {
     {
       field: 'status',
       minWidth: 100,
-      cellRenderer: (p: any) =>
-        `<span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;background:${p.value === 'active' ? '#d1fae5' : p.value === 'inactive' ? '#fee2e2' : '#fef3c7'};color:${p.value === 'active' ? '#065f46' : p.value === 'inactive' ? '#991b1b' : '#92400e'}">${p.value}</span>`,
+      cellRenderer: (p: any) => {
+        const val = String(p.value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const bg = p.value === 'active' ? '#d1fae5' : p.value === 'inactive' ? '#fee2e2' : '#fef3c7';
+        const color = p.value === 'active' ? '#065f46' : p.value === 'inactive' ? '#991b1b' : '#92400e';
+        return `<span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;background:${bg};color:${color}">${val}</span>`;
+      },
     },
     { field: 'joinDate', minWidth: 110 },
     { field: 'score', width: 90 },

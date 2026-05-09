@@ -25,7 +25,8 @@
       "@nice-tools/isoframe-react": ["packages/isoframe-react/src/index.ts"],
       "@nice-tools/isojson": ["packages/isojson/src/index.ts"],
       "@nice-tools/isojson/flatten": ["packages/isojson/src/flatten.ts"],
-      "@nice-tools/isojson/coerce": ["packages/isojson/src/coerce.ts"]
+      "@nice-tools/isojson/coerce": ["packages/isojson/src/coerce.ts"],
+      "@nice-tools/isojson/cosmosdb": ["packages/isojson/src/cosmosdb.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

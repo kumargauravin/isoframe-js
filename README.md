@@ -10,6 +10,7 @@
 |---|---|---|
 | [`@nice-tools/isoframe`](packages/isoframe) | 0.1.0 | Core DataFrame — zero deps, isomorphic |
 | [`@nice-tools/isocsv`](packages/isocsv) | 0.1.0 | RFC 4180 CSV/TSV parser — zero deps, isomorphic |
+| [`@nice-tools/isojson`](packages/isojson) | 0.1.0 | CosmosDB doc flattener + schema coercer — zero deps |
 | [`@nice-tools/isoframe-react`](packages/isoframe-react) | 0.1.0 | React 19 hooks for IsoFrame |
 | [`demo-react`](apps/demo-react) | — | Next.js 16 demo app with AG Grid |
 
@@ -30,6 +31,12 @@ isoframe-js/                  ← NX monorepo root
 │   ├── isocsv/               ← @nice-tools/isocsv
 │   │   └── src/
 │   │       ├── parser.ts     ← RFC 4180 parser + stringifier
+│   │       └── types.ts
+│   ├── isojson/              ← @nice-tools/isojson
+│   │   └── src/
+│   │       ├── flatten.ts    ← JSON flattening + record key alignment
+│   │       ├── coerce.ts     ← schema-driven + auto type coercion
+│   │       ├── cosmosdb.ts   ← CosmosDB system-field stripping + flatten
 │   │       └── types.ts
 │   └── isoframe-react/       ← @nice-tools/isoframe-react
 │       └── src/hooks/        ← useFrame, useSorted, useFiltered, usePaginated, useGrouped
