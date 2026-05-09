@@ -19,6 +19,7 @@ import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 
 import { employeeFrame, orderFrame } from '../lib/fakeData';
+import { escapeHtml } from '../lib/escapeHtml';
 import { IsoFrame } from '@nice-tools/isoframe';
 import type { IIsoFrame, Row } from '@nice-tools/isoframe';
 import { AgGridReact } from 'ag-grid-react';
@@ -116,7 +117,7 @@ export default function Home() {
       field: 'status',
       minWidth: 100,
       cellRenderer: (p: any) => {
-        const val = String(p.value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const val = escapeHtml(p.value);
         const bg = p.value === 'active' ? '#d1fae5' : p.value === 'inactive' ? '#fee2e2' : '#fef3c7';
         const color = p.value === 'active' ? '#065f46' : p.value === 'inactive' ? '#991b1b' : '#92400e';
         return `<span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;background:${bg};color:${color}">${val}</span>`;
