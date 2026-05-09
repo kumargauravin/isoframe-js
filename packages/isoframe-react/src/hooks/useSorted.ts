@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
-import type { IIsoFrame, SortOrder } from '@nice-tools/isoframe';
+import type { IIsoFrame } from '@nice-tools/isoframe';
 
 export function useSorted(
   frame: IIsoFrame | null,
   key: string | null,
-  order: SortOrder = 'asc',
+  ascending = true,
 ): IIsoFrame | null {
   return useMemo(() => {
     if (!frame || !key) return frame;
-    return frame.sortBy(key, order);
-  }, [frame, key, order]);
+    return frame.sort_values(key, ascending);
+  }, [frame, key, ascending]);
 }

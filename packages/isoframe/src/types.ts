@@ -10,11 +10,8 @@ export type ColumnMap = Record<string, Scalar[]>;
 /** Input accepted by IsoFrame constructor */
 export type FrameInput = Row[] | ColumnMap;
 
-/** Sort order */
-export type SortOrder = 'asc' | 'desc';
-
-/** Join types */
-export type JoinType = 'left' | 'inner' | 'right' | 'outer';
+/** Merge (join) types — pandas-style naming */
+export type MergeHow = 'left' | 'inner' | 'right' | 'outer';
 
 /** Aggregation function names */
 export type AggFnName = 'sum' | 'mean' | 'count' | 'min' | 'max' | 'first' | 'last';
@@ -58,34 +55,34 @@ export interface IIsoFrame {
   describe(): Record<string, ColumnStats | { count: number; unique: number; top: Scalar; freq: number }>;
   info(): void;
   sample(n: number): IIsoFrame;
-  clone(): IIsoFrame;
+  copy(): IIsoFrame;
 
   // Selection / wrangling
   select(keys: string[]): IIsoFrame;
   drop(keys: string[]): IIsoFrame;
   rename(map: Record<string, string>): IIsoFrame;
-  mutate(key: string, fn: (row: Row, index: number) => Scalar): IIsoFrame;
+  assign(key: string, fn: (row: Row, index: number) => Scalar): IIsoFrame;
   apply(fn: (row: Row, index: number) => Row): IIsoFrame;
   set_index(key: string): IIsoFrame;
   reset_index(): IIsoFrame;
 
   // Missing value handling
-  is_na(): IIsoFrame;
-  not_na(): IIsoFrame;
-  drop_na(keys?: string[]): IIsoFrame;
-  fill_na(value: Scalar | Record<string, Scalar>, keys?: string[]): IIsoFrame;
+  isna(): IIsoFrame;
+  notna(): IIsoFrame;
+  dropna(subset?: string[]): IIsoFrame;
+  fillna(value: Scalar | Record<string, Scalar>, subset?: string[]): IIsoFrame;
 
   // Sorting & pagination
-  sort_by(key: string, order?: SortOrder): IIsoFrame;
+  sort_values(by: string, ascending?: boolean): IIsoFrame;
   paginate(pageNumber: number, pageSize: number): IIsoFrame;
 
   // Async operations
-  where(predicate: (row: Row, index: number) => boolean): Promise<IIsoFrame>;
-  join(other: IIsoFrame | Row[], primaryKey: string, foreignKey: string, type?: JoinType): Promise<IIsoFrame>;
-  group_by(keys: string | string[]): Promise<IGroupedFrame>;
+  query(predicate: (row: Row, index: number) => boolean): Promise<IIsoFrame>;
+  merge(other: IIsoFrame | Row[], left_on: string, right_on: string, how?: MergeHow): Promise<IIsoFrame>;
+  groupby(keys: string | string[]): Promise<IGroupedFrame>;
 
   // Reshaping
-  pivot(index: string, columns: string, values: string, aggFn?: AggFnName): Promise<IIsoFrame>;
+  pivot_table(index: string, columns: string, values: string, aggfunc?: AggFnName): Promise<IIsoFrame>;
   melt(idVars: string[], valueVars?: string[]): IIsoFrame;
 
   // Accessors
@@ -93,8 +90,8 @@ export interface IIsoFrame {
   loc(indices: number[]): IIsoFrame;
 
   // Export
-  to_array(): Row[];
-  to_object(): ColumnMap;
+  to_list(): Row[];
+  to_dict(): ColumnMap;
 
   // Static
   // concat is on the class, not the instance
@@ -124,5 +121,5 @@ export interface ISeries {
   mean(): number;
   min(): Scalar;
   max(): Scalar;
-  to_array(): Scalar[];
+  to_list(): Scalar[];
 }

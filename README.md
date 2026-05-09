@@ -11,7 +11,7 @@
 | [`@nice-tools/isoframe`](packages/isoframe) | 0.1.0 | Core DataFrame — zero deps, isomorphic |
 | [`@nice-tools/isocsv`](packages/isocsv) | 0.1.0 | RFC 4180 CSV/TSV parser — zero deps, isomorphic |
 | [`@nice-tools/isoframe-react`](packages/isoframe-react) | 0.1.0 | React 19 hooks for IsoFrame |
-| [`demo-react`](apps/demo-react) | — | Next.js 15 demo app with AG Grid |
+| [`demo-react`](apps/demo-react) | — | Next.js 16 demo app with AG Grid |
 
 ---
 
@@ -34,7 +34,7 @@ isoframe-js/                  ← NX monorepo root
 │   └── isoframe-react/       ← @nice-tools/isoframe-react
 │       └── src/hooks/        ← useFrame, useSorted, useFiltered, usePaginated, useGrouped
 └── apps/
-    └── demo-react/           ← Next.js 15 demo (AG Grid dashboard)
+    └── demo-react/           ← Next.js 16 demo (AG Grid dashboard)
 ```
 
 ### Key design decisions
@@ -95,7 +95,7 @@ const df2 = new IsoFrame({
 df.head(5)          // first N rows → new IsoFrame
 df.tail(5)          // last N rows
 df.sample(10)       // random N rows (Fisher-Yates)
-df.clone()          // deep copy
+df.copy()           // deep copy
 ```
 
 ### Selection & Wrangling
@@ -104,39 +104,39 @@ df.clone()          // deep copy
 df.select(['id', 'name'])              // keep only these columns
 df.drop(['salary'])                    // drop these columns
 df.rename({ name: 'fullName' })        // rename columns
-df.mutate('bonus', row => row.salary * 0.1)  // add/overwrite column
+df.assign('bonus', row => row.salary * 0.1)  // add/overwrite column
 df.apply(row => ({ ...row, fullName: `${row.first} ${row.last}` }))
 ```
 
 ### Sorting & Pagination
 
 ```ts
-df.sortBy('salary', 'desc')            // sync, returns new IsoFrame
+df.sort_values('salary', false)        // sync, returns new IsoFrame (false = descending)
 df.paginate(pageNumber, pageSize)      // 1-based page, returns new IsoFrame
 ```
 
 ### Missing Values
 
 ```ts
-df.isNa()                  // boolean mask frame
-df.notNa()                 // boolean mask frame
-df.dropNa(['salary'])      // drop rows where salary is null
-df.fillNa(0)               // fill all nulls with 0
-df.fillNa({ salary: 0, name: 'Unknown' })  // fill per column
+df.isna()                  // boolean mask frame
+df.notna()                 // boolean mask frame
+df.dropna(['salary'])      // drop rows where salary is null
+df.fillna(0)               // fill all nulls with 0
+df.fillna({ salary: 0, name: 'Unknown' })  // fill per column
 ```
 
 ### Async Operations (non-blocking)
 
 ```ts
 // Filter — yields control every 50 000 rows
-const engineers = await df.where(row => row.dept === 'Eng');
+const engineers = await df.query(row => row.dept === 'Eng');
 
 // Hash-Join O(n+m)
-const joined = await df.join(deptFrame, 'dept', 'deptName', 'left');
-// type: 'left' | 'inner' | 'right' | 'outer'
+const joined = await df.merge(deptFrame, 'dept', 'deptName', 'left');
+// how: 'left' | 'inner' | 'right' | 'outer'
 
 // GroupBy
-const grouped = await df.groupBy('dept');
+const grouped = await df.groupby('dept');
 const sums    = await grouped.sum('salary');
 const means   = await grouped.mean('salary');
 const counts  = await grouped.count();
@@ -147,7 +147,7 @@ const result  = await grouped.agg({ salary: 'sum', age: 'mean' });
 
 ```ts
 // Pivot table
-const pivot = await df.pivot('dept', 'year', 'revenue', 'sum');
+const pivot = await df.pivot_table('dept', 'year', 'revenue', 'sum');
 
 // Melt (wide → long)
 const melted = df.melt(['id', 'name'], ['q1', 'q2', 'q3', 'q4']);
@@ -158,18 +158,18 @@ const melted = df.melt(['id', 'name'], ['q1', 'q2', 'q3', 'q4']);
 ```ts
 const s = df.col('salary');
 s.unique()        // distinct values
-s.valueCounts()   // [{ value, count }] sorted by frequency
+s.value_counts()  // [{ value, count }] sorted by frequency
 s.sum()           // numeric sum
 s.mean()          // numeric mean
 s.min() / s.max()
-s.toArray()
+s.to_list()
 ```
 
 ### Export
 
 ```ts
-df.toArray()    // Row[]  — shallow copy
-df.toObject()   // ColumnMap  — { col: value[] }
+df.to_list()    // Row[]  — shallow copy
+df.to_dict()    // ColumnMap  — { col: value[] }
 ```
 
 ### Static
@@ -198,7 +198,7 @@ const { rows, columns, errors } = parseCSV(csvString, {
 const df = new IsoFrame(rows);
 
 // Serialize back
-const csv = stringifyCSV(df.toArray(), df.columns);
+const csv = stringifyCSV(df.to_list(), df.columns);
 ```
 
 ---
@@ -218,7 +218,7 @@ import {
 const { frame, loading, error, setData } = useFrame(initialRows);
 
 // Sort (memoized)
-const sorted = useSorted(frame, 'salary', 'desc');
+const sorted = useSorted(frame, 'salary', false);
 
 // Async filter (non-blocking)
 const { filtered, loading } = useFiltered(frame, row => row.dept === 'Eng');

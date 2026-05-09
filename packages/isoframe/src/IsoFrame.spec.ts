@@ -33,7 +33,7 @@ describe('IsoFrame', () => {
     const df = new IsoFrame(sampleRows);
     expect(df.head(2).shape[0]).toBe(2);
     expect(df.tail(2).shape[0]).toBe(2);
-    expect(df.tail(2).toArray()[0].name).toBe('Dave');
+    expect(df.tail(2).to_list()[0].name).toBe('Dave');
   });
 
   it('select/drop', () => {
@@ -51,90 +51,90 @@ describe('IsoFrame', () => {
     expect(r.columns).not.toContain('name');
   });
 
-  it('mutate', () => {
+  it('assign', () => {
     const df = new IsoFrame(sampleRows);
-    const m = df.mutate('bonus', (row) => (row.salary as number) * 0.1);
-    expect(m.toArray()[0].bonus).toBe(9000);
+    const m = df.assign('bonus', (row) => (row.salary as number) * 0.1);
+    expect(m.to_list()[0].bonus).toBe(9000);
   });
 
-  it('sortBy asc/desc', () => {
+  it('sort_values asc/desc', () => {
     const df = new IsoFrame(sampleRows);
-    const asc = df.sortBy('age', 'asc').toArray();
+    const asc = df.sort_values('age', true).to_list();
     expect(asc[0].age).toBe(25);
-    const desc = df.sortBy('salary', 'desc').toArray();
+    const desc = df.sort_values('salary', false).to_list();
     expect(desc[0].salary).toBe(110000);
   });
 
   it('paginate', () => {
     const df = new IsoFrame(sampleRows);
-    const page1 = df.paginate(1, 2).toArray();
-    const page2 = df.paginate(2, 2).toArray();
+    const page1 = df.paginate(1, 2).to_list();
+    const page2 = df.paginate(2, 2).to_list();
     expect(page1).toHaveLength(2);
     expect(page2).toHaveLength(2);
     expect(page1[0].id).toBe(1);
     expect(page2[0].id).toBe(3);
   });
 
-  it('where (async filter)', async () => {
+  it('query (async filter)', async () => {
     const df = new IsoFrame(sampleRows);
-    const eng = await df.where((row) => row.dept === 'Eng');
+    const eng = await df.query((row) => row.dept === 'Eng');
     expect(eng.shape[0]).toBe(3);
   });
 
-  it('join (left hash-join)', async () => {
+  it('merge (left hash-join)', async () => {
     const df = new IsoFrame(sampleRows);
     const deptDf = new IsoFrame(deptRows);
-    const joined = await df.join(deptDf, 'dept', 'deptName', 'left');
+    const joined = await df.merge(deptDf, 'dept', 'deptName', 'left');
     expect(joined.shape[0]).toBe(5);
-    expect(joined.toArray()[0].location).toBe('NYC');
+    expect(joined.to_list()[0].location).toBe('NYC');
   });
 
-  it('groupBy + sum', async () => {
+  it('groupby + sum', async () => {
     const df = new IsoFrame(sampleRows);
-    const grouped = await df.groupBy('dept');
+    const grouped = await df.groupby('dept');
     const result = await grouped.sum('salary');
-    const arr = result.sortBy('dept').toArray();
+    const arr = result.sort_values('dept', true).to_list();
     expect(arr.find((r) => r.dept === 'Eng')?.salary_sum).toBe(295000);
     expect(arr.find((r) => r.dept === 'HR')?.salary_sum).toBe(125000);
   });
 
-  it('groupBy + mean', async () => {
+  it('groupby + mean', async () => {
     const df = new IsoFrame(sampleRows);
-    const grouped = await df.groupBy('dept');
+    const grouped = await df.groupby('dept');
     const result = await grouped.mean('salary');
-    const arr = result.toArray();
+    const arr = result.to_list();
     const eng = arr.find((r) => r.dept === 'Eng');
     expect(eng?.salary_mean).toBeCloseTo(98333.33, 1);
   });
 
-  it('groupBy + count', async () => {
+  it('groupby + count', async () => {
     const df = new IsoFrame(sampleRows);
-    const grouped = await df.groupBy('dept');
+    const grouped = await df.groupby('dept');
     const result = await grouped.count();
-    const arr = result.toArray();
+    const arr = result.to_list();
     expect(arr.find((r) => r.dept === 'Eng')?.count).toBe(3);
   });
 
-  it('groupBy + agg', async () => {
+  it('groupby + agg', async () => {
     const df = new IsoFrame(sampleRows);
-    const grouped = await df.groupBy('dept');
+    const grouped = await df.groupby('dept');
     const result = await grouped.agg({ salary: 'sum', age: 'mean' });
     expect(result.shape[0]).toBe(2);
   });
 
-  it('dropNa', () => {
+  it('dropna', () => {
     const df = new IsoFrame([
       { id: 1, val: 10 },
       { id: 2, val: null },
       { id: 3, val: 30 },
     ]);
-    expect(df.dropNa().shape[0]).toBe(2);
+    expect(df.dropna().shape[0]).toBe(2);
   });
 
-  it('fillNa', () => {
+  it('fillna', () => {
     const df = new IsoFrame([{ id: 1, val: null }, { id: 2, val: 5 }]);
-    const filled = df.fillNa(0);
-    expect(filled.toArray()[0].val).toBe(0);
+    const filled = df.fillna(0);
+    expect(filled.to_list()[0].val).toBe(0);
   });
 
   it('col().unique()', () => {
@@ -142,9 +142,9 @@ describe('IsoFrame', () => {
     expect(df.col('dept').unique().sort()).toEqual(['Eng', 'HR']);
   });
 
-  it('col().valueCounts()', () => {
+  it('col().value_counts()', () => {
     const df = new IsoFrame(sampleRows);
-    const vc = df.col('dept').valueCounts();
+    const vc = df.col('dept').value_counts();
     expect(vc[0].count).toBe(3); // Eng appears 3 times
   });
 
@@ -163,9 +163,9 @@ describe('IsoFrame', () => {
     expect(combined.shape[0]).toBe(2);
   });
 
-  it('toObject (column-major)', () => {
+  it('to_dict (column-major)', () => {
     const df = new IsoFrame([{ a: 1, b: 2 }, { a: 3, b: 4 }]);
-    const obj = df.toObject();
+    const obj = df.to_dict();
     expect(obj.a).toEqual([1, 3]);
     expect(obj.b).toEqual([2, 4]);
   });
@@ -177,9 +177,9 @@ describe('IsoFrame', () => {
     expect(desc.salary).toHaveProperty('std');
   });
 
-  it('isNa / notNa / dropNa', () => {
+  it('isna / notna / dropna', () => {
     const df = new IsoFrame([{ a: 1, b: null }, { a: 2, b: 3 }]);
-    const isna = df.isNa().toArray();
+    const isna = df.isna().to_list();
     expect(isna[0].b).toBe(true);
     expect(isna[1].b).toBe(false);
   });

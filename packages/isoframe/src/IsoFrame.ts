@@ -10,10 +10,9 @@ import {
   IGroupedFrame,
   IIsoFrame,
   ISeries,
-  JoinType,
+  MergeHow,
   Row,
   Scalar,
-  SortOrder,
 } from './types';
 import { normalizeInput, toColumnMap, inferColumns } from './utils/normalize';
 import { inferDtypes } from './utils/dtype';
@@ -128,7 +127,7 @@ export class IsoFrame implements IIsoFrame {
     }
   }
 
-  clone(): IsoFrame {
+  copy(): IsoFrame {
     return IsoFrame._fromRows(this._rows);
   }
 
@@ -159,7 +158,7 @@ export class IsoFrame implements IIsoFrame {
     return IsoFrame._fromRows(rows);
   }
 
-  mutate(key: string, fn: (row: Row, index: number) => Scalar): IsoFrame {
+  assign(key: string, fn: (row: Row, index: number) => Scalar): IsoFrame {
     const rows = this._rows.map((row, i) =>
       Object.freeze({ ...row, [key]: fn(row as Row, i) }) as Row,
     );
@@ -172,20 +171,20 @@ export class IsoFrame implements IIsoFrame {
   }
 
   set_index(key: string): IsoFrame {
-    const frame = this.clone();
+    const frame = this.copy();
     (frame as any)._index = key;
     return frame;
   }
 
   reset_index(): IsoFrame {
-    const frame = this.clone();
+    const frame = this.copy();
     (frame as any)._index = null;
     return frame;
   }
 
   // ── Missing values ────────────────────────────────────────────────────────
 
-  is_na(): IsoFrame {
+  isna(): IsoFrame {
     const rows = this._rows.map((row) => {
       const r: Row = {};
       for (const k of this._columns) {
@@ -196,7 +195,7 @@ export class IsoFrame implements IIsoFrame {
     return IsoFrame._fromRows(rows);
   }
 
-  not_na(): IsoFrame {
+  notna(): IsoFrame {
     const rows = this._rows.map((row) => {
       const r: Row = {};
       for (const k of this._columns) {
@@ -207,17 +206,17 @@ export class IsoFrame implements IIsoFrame {
     return IsoFrame._fromRows(rows);
   }
 
-  drop_na(keys?: string[]): IsoFrame {
-    const checkKeys = keys ?? this._columns;
+  dropna(subset?: string[]): IsoFrame {
+    const checkKeys = subset ?? this._columns;
     const rows = this._rows.filter((row) =>
       checkKeys.every((k) => row[k] !== null && row[k] !== undefined),
     ) as Row[];
     return IsoFrame._fromRows(rows);
   }
 
-  fill_na(value: Scalar | Record<string, Scalar>, keys?: string[]): IsoFrame {
+  fillna(value: Scalar | Record<string, Scalar>, subset?: string[]): IsoFrame {
     const isMap = typeof value === 'object' && value !== null && !Array.isArray(value);
-    const fillKeys = keys ?? this._columns;
+    const fillKeys = subset ?? this._columns;
     const rows = this._rows.map((row) => {
       const r: Row = { ...row };
       for (const k of fillKeys) {
@@ -232,8 +231,8 @@ export class IsoFrame implements IIsoFrame {
 
   // ── Sort & paginate ───────────────────────────────────────────────────────
 
-  sort_by(key: string, order: SortOrder = 'asc'): IsoFrame {
-    return IsoFrame._fromRows(sortRows(this._rows, key, order));
+  sort_values(by: string, ascending = true): IsoFrame {
+    return IsoFrame._fromRows(sortRows(this._rows, by, ascending ? 'asc' : 'desc'));
   }
 
   paginate(pageNumber: number, pageSize: number): IsoFrame {
@@ -242,24 +241,24 @@ export class IsoFrame implements IIsoFrame {
 
   // ── Async operations ──────────────────────────────────────────────────────
 
-  async where(predicate: (row: Row, index: number) => boolean): Promise<IsoFrame> {
+  async query(predicate: (row: Row, index: number) => boolean): Promise<IsoFrame> {
     const filtered = await filterRows(this._rows, predicate);
     return IsoFrame._fromRows(filtered);
   }
 
-  async join(
+  async merge(
     other: IIsoFrame | Row[],
-    primaryKey: string,
-    foreignKey: string,
-    type: JoinType = 'left',
+    left_on: string,
+    right_on: string,
+    how: MergeHow = 'left',
   ): Promise<IsoFrame> {
     const otherRows: ReadonlyArray<Row> =
-      Array.isArray(other) ? (other as Row[]) : (other as IsoFrame).toArray();
-    const joined = await hashJoin(this._rows, otherRows, primaryKey, foreignKey, type);
+      Array.isArray(other) ? (other as Row[]) : (other as IsoFrame).to_list();
+    const joined = await hashJoin(this._rows, otherRows, left_on, right_on, how);
     return IsoFrame._fromRows(joined);
   }
 
-  async group_by(keys: string | string[]): Promise<IGroupedFrame> {
+  async groupby(keys: string | string[]): Promise<IGroupedFrame> {
     const keyArr = Array.isArray(keys) ? keys : [keys];
     const groups = await buildGroups(this._rows, keyArr);
     return new GroupedFrame(keyArr, groups, IsoFrame as unknown as new (rows: Row[]) => IIsoFrame);
@@ -267,23 +266,23 @@ export class IsoFrame implements IIsoFrame {
 
   // ── Reshape ───────────────────────────────────────────────────────────────
 
-  async pivot(
+  async pivot_table(
     index: string,
     columns: string,
     values: string,
-    aggFn: AggFnName = 'sum',
+    aggfunc: AggFnName = 'sum',
   ): Promise<IsoFrame> {
-    const grouped = await this.group_by([index, columns]);
-    const aggResult = await grouped.agg({ [values]: aggFn });
+    const grouped = await this.groupby([index, columns]);
+    const aggResult = await grouped.agg({ [values]: aggfunc });
     // Pivot: turn column values into column headers
-    const aggRows = aggResult.toArray();
+    const aggRows = aggResult.to_list();
     const colVals = [...new Set(aggRows.map((r) => String(r[columns])))] as string[];
     const indexVals = [...new Set(aggRows.map((r) => r[index] as Scalar))];
     const pivotRows: Row[] = indexVals.map((idxVal) => {
       const row: Row = { [index]: idxVal };
       for (const cv of colVals) {
         const match = aggRows.find((r) => r[index] === idxVal && String(r[columns]) === cv);
-        const aggKey = `${values}_${aggFn}`;
+        const aggKey = `${values}_${aggfunc}`;
         row[cv] = match ? match[aggKey] ?? null : null;
       }
       return Object.freeze(row) as Row;
@@ -321,11 +320,11 @@ export class IsoFrame implements IIsoFrame {
 
   // ── Export ────────────────────────────────────────────────────────────────
 
-  to_array(): Row[] {
+  to_list(): Row[] {
     return this._rows.map((r) => ({ ...r }));
   }
 
-  to_object(): ColumnMap {
+  to_dict(): ColumnMap {
     return toColumnMap(this._rows);
   }
 
@@ -333,7 +332,7 @@ export class IsoFrame implements IIsoFrame {
 
   static concat(frames: IIsoFrame[]): IsoFrame {
     const rows: Row[] = [];
-    for (const f of frames) rows.push(...f.toArray());
+    for (const f of frames) rows.push(...f.to_list());
     return IsoFrame._fromRows(rows.map((r) => Object.freeze(r) as Row));
   }
 }

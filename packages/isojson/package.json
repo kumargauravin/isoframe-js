@@ -1,0 +1,35 @@
+{
+  "name": "@nice-tools/isojson",
+  "version": "0.1.0",
+  "description": "Isomorphic zero-dependency JSON flattener and schema coercer — produces IsoFrame-compatible rows from nested CosmosDB documents",
+  "keywords": ["json", "flatten", "cosmosdb", "schema", "isomorphic", "dataframe"],
+  "license": "MIT",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./flatten": {
+      "import": "./dist/esm/flatten.js",
+      "require": "./dist/cjs/flatten.js",
+      "types": "./dist/types/flatten.d.ts"
+    },
+    "./coerce": {
+      "import": "./dist/esm/coerce.js",
+      "require": "./dist/cjs/coerce.js",
+      "types": "./dist/types/coerce.d.ts"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json && tsc -p tsconfig.cjs.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0"
+  }
+}

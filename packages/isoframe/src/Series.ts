@@ -46,7 +46,7 @@ export class Series implements ISeries {
     return nums.length ? Math.max(...nums) : null;
   }
 
-  to_array(): Scalar[] {
+  to_list(): Scalar[] {
     return [...this.values];
   }
 }

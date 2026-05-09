@@ -1,72 +1,98 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Box from '@mui/material/Box';
+import Container from '@mui/material/Container';
+import Typography from '@mui/material/Typography';
+import Paper from '@mui/material/Paper';
+import Grid from '@mui/material/Grid';
+import Chip from '@mui/material/Chip';
+import Button from '@mui/material/Button';
+import ButtonGroup from '@mui/material/ButtonGroup';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import CircularProgress from '@mui/material/CircularProgress';
+import Divider from '@mui/material/Divider';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+
 import { employeeFrame, orderFrame } from '../lib/fakeData';
 import { IsoFrame } from '@nice-tools/isoframe';
 import type { IIsoFrame, Row } from '@nice-tools/isoframe';
 import { AgGridReact } from 'ag-grid-react';
 import type { ColDef } from 'ag-grid-community';
-import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
+import { AllCommunityModule, ModuleRegistry, themeQuartz } from 'ag-grid-community';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-type TabKey = 'employees' | 'joined' | 'grouped' | 'paginated' | 'csv';
+const gridTheme = themeQuartz.withParams({
+  borderRadius: 8,
+  headerBackgroundColor: '#f1f5f9',
+  headerTextColor: '#374151',
+  rowHoverColor: '#eff6ff',
+  fontSize: 13,
+});
+
+type TabKey = 'employees' | 'joined' | 'grouped' | 'paginated' | 'isojson';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabKey>('employees');
   const [filterDept, setFilterDept] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [sortKey, setSortKey] = useState('id');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortCol, setSortCol] = useState('id');
+  const [ascending, setAscending] = useState(true);
   const [pageNum, setPageNum] = useState(1);
   const pageSize = 20;
 
   const [joinedFrame, setJoinedFrame] = useState<IIsoFrame | null>(null);
   const [groupedFrame, setGroupedFrame] = useState<IIsoFrame | null>(null);
   const [filteredFrame, setFilteredFrame] = useState<IIsoFrame | null>(null);
+  const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ totalEmp: 0, totalOrders: 0, avgSalary: 0, depts: 0 });
 
-  // Stats
   useEffect(() => {
-    const totalEmp = employeeFrame.shape[0];
-    const totalOrders = orderFrame.shape[0];
-    const avgSalary = Math.round(employeeFrame.col('salary').mean());
-    const depts = employeeFrame.col('department').unique().length;
-    setStats({ totalEmp, totalOrders, avgSalary, depts });
+    setStats({
+      totalEmp: employeeFrame.shape[0],
+      totalOrders: orderFrame.shape[0],
+      avgSalary: Math.round(employeeFrame.col('salary').mean()),
+      depts: employeeFrame.col('department').unique().length,
+    });
   }, []);
 
-  // Join: employees + orders on id = employeeId
   useEffect(() => {
     (async () => {
-      const joined = await employeeFrame.join(orderFrame, 'id', 'employeeId', 'left');
+      const joined = await employeeFrame.merge(orderFrame, 'id', 'employeeId', 'left');
       setJoinedFrame(joined);
     })();
   }, []);
 
-  // GroupBy dept → sum salary
   useEffect(() => {
     (async () => {
-      const grouped = await employeeFrame.groupBy('department');
+      const grouped = await employeeFrame.groupby('department');
       const agg = await grouped.agg({ salary: 'sum', age: 'mean' });
-      setGroupedFrame(agg.sortBy('salary_sum', 'desc'));
+      setGroupedFrame(agg.sort_values('salary_sum', false));
     })();
   }, []);
 
-  // Filter
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     (async () => {
-      const result = await employeeFrame.where((row) => {
+      const result = await employeeFrame.query((row) => {
         const deptOk = !filterDept || row.department === filterDept;
         const statusOk = !filterStatus || row.status === filterStatus;
         return deptOk && statusOk;
       });
-      if (!cancelled) setFilteredFrame(result.sortBy(sortKey, sortOrder));
+      if (!cancelled) {
+        setFilteredFrame(result.sort_values(sortCol, ascending));
+        setLoading(false);
+      }
     })();
     return () => { cancelled = true; };
-  }, [filterDept, filterStatus, sortKey, sortOrder]);
+  }, [filterDept, filterStatus, sortCol, ascending]);
 
-  // Paginated data
   const paginatedFrame = useMemo(() => {
     if (!filteredFrame) return null;
     return filteredFrame.paginate(pageNum, pageSize);
@@ -77,251 +103,354 @@ export default function Home() {
     return Math.ceil(filteredFrame.shape[0] / pageSize);
   }, [filteredFrame]);
 
-  // Columns for AG Grid
   const empColumns: ColDef[] = [
     { field: 'id', width: 70 },
-    { field: 'firstName', headerName: 'First' },
-    { field: 'lastName', headerName: 'Last' },
-    { field: 'department' },
-    { field: 'region' },
-    { field: 'salary', valueFormatter: (p) => `$${p.value?.toLocaleString()}` },
+    { field: 'firstName', headerName: 'First', minWidth: 90 },
+    { field: 'lastName', headerName: 'Last', minWidth: 90 },
+    { field: 'department', minWidth: 110 },
+    { field: 'region', minWidth: 130 },
+    { field: 'salary', valueFormatter: (p) => `$${p.value?.toLocaleString()}`, minWidth: 110 },
     { field: 'age', width: 80 },
     { field: 'yearsExp', headerName: 'Exp', width: 80 },
     {
       field: 'status',
-      cellRenderer: (p: any) => {
-        const cls = p.value === 'active' ? 'badge-green' : p.value === 'inactive' ? 'badge-red' : 'badge-yellow';
-        return `<span class="badge ${cls}">${p.value}</span>`;
-      },
+      minWidth: 100,
+      cellRenderer: (p: any) =>
+        `<span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;background:${p.value === 'active' ? '#d1fae5' : p.value === 'inactive' ? '#fee2e2' : '#fef3c7'};color:${p.value === 'active' ? '#065f46' : p.value === 'inactive' ? '#991b1b' : '#92400e'}">${p.value}</span>`,
     },
-    { field: 'joinDate' },
-    { field: 'score' },
+    { field: 'joinDate', minWidth: 110 },
+    { field: 'score', width: 90 },
   ];
 
   const joinedColumns: ColDef[] = [
     { field: 'id', width: 70 },
-    { field: 'firstName', headerName: 'First' },
-    { field: 'department' },
-    { field: 'orderId', headerName: 'Order' },
-    { field: 'product' },
+    { field: 'firstName', headerName: 'First', minWidth: 90 },
+    { field: 'department', minWidth: 110 },
+    { field: 'orderId', headerName: 'Order #', width: 90 },
+    { field: 'product', minWidth: 110 },
     { field: 'quantity', width: 100 },
-    { field: 'unitPrice', headerName: 'Unit $', valueFormatter: (p) => `$${p.value}` },
-    { field: 'orderDate' },
-    { field: 'status' },
+    { field: 'unitPrice', headerName: 'Unit $', valueFormatter: (p) => `$${p.value}`, width: 100 },
+    { field: 'orderDate', minWidth: 110 },
+    { field: 'status', minWidth: 100 },
   ];
 
   const groupedColumns: ColDef[] = [
-    { field: 'department', flex: 1 },
-    { field: 'salary_sum', headerName: 'Total Salary', valueFormatter: (p) => `$${p.value?.toLocaleString()}` },
-    { field: 'age_mean', headerName: 'Avg Age', valueFormatter: (p) => p.value?.toFixed(1) },
+    { field: 'department', flex: 1, minWidth: 130 },
+    { field: 'salary_sum', headerName: 'Total Salary', flex: 1, valueFormatter: (p) => `$${p.value?.toLocaleString()}` },
+    { field: 'age_mean', headerName: 'Avg Age', width: 110, valueFormatter: (p) => p.value?.toFixed(1) },
   ];
 
-  const depts = employeeFrame.col('department').unique() as string[];
+  const depts = (employeeFrame.col('department').unique() as string[]).sort();
   const statuses = employeeFrame.col('status').unique() as string[];
 
+  const tabs: { key: TabKey; label: string }[] = [
+    { key: 'employees', label: 'All Employees' },
+    { key: 'joined', label: 'Hash-Join' },
+    { key: 'grouped', label: 'GroupBy' },
+    { key: 'paginated', label: 'Filter + Paginate' },
+    { key: 'isojson', label: 'IsoJSON / CSV' },
+  ];
+
   return (
-    <div className="container">
-      <div className="card">
-        <h1>@nice-tools/isoframe Dashboard Demo</h1>
-        <p style={{ color: '#6b7280' }}>
-          Isomorphic DataFrame · Hash-Join · GroupBy · Filter · Sort · Paginate · AG Grid
-        </p>
-      </div>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Header */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          @nice-tools/isoframe
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Isomorphic DataFrame · Hash-Join · GroupBy · query() · sort_values() · paginate() ·
+          MUI 9 · AG Grid 35 · Next 16
+        </Typography>
+      </Paper>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="value">{stats.totalEmp}</div>
-          <div className="label">Employees</div>
-        </div>
-        <div className="stat-card">
-          <div className="value">{stats.totalOrders}</div>
-          <div className="label">Orders</div>
-        </div>
-        <div className="stat-card">
-          <div className="value">${stats.avgSalary.toLocaleString()}</div>
-          <div className="label">Avg Salary</div>
-        </div>
-        <div className="stat-card">
-          <div className="value">{stats.depts}</div>
-          <div className="label">Departments</div>
-        </div>
-        <div className="stat-card">
-          <div className="value">{joinedFrame?.shape[0] ?? '…'}</div>
-          <div className="label">Joined Rows</div>
-        </div>
-      </div>
+      {/* Stats */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        {[
+          { label: 'Employees', value: stats.totalEmp },
+          { label: 'Orders', value: stats.totalOrders },
+          { label: 'Avg Salary', value: `$${stats.avgSalary.toLocaleString()}` },
+          { label: 'Departments', value: stats.depts },
+          { label: 'Joined Rows', value: joinedFrame?.shape[0] ?? '…' },
+        ].map(({ label, value }) => (
+          <Grid key={label} size={{ xs: 6, sm: 4, md: 2.4 }}>
+            <Paper sx={{ p: 2, textAlign: 'center' }}>
+              <Typography variant="h5" color="primary" fontWeight={700}>
+                {value}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {label}
+              </Typography>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
 
-      <div className="card">
-        <div className="tabs">
-          {(['employees', 'joined', 'grouped', 'paginated', 'csv'] as TabKey[]).map((t) => (
-            <button
-              key={t}
-              className={`tab ${activeTab === t ? 'active' : ''}`}
-              onClick={() => { setActiveTab(t); setPageNum(1); }}
+      {/* Tabs */}
+      <Paper sx={{ p: 3 }}>
+        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2, gap: 1 }}>
+          {tabs.map(({ key, label }) => (
+            <Button
+              key={key}
+              variant={activeTab === key ? 'contained' : 'outlined'}
+              size="small"
+              onClick={() => { setActiveTab(key); setPageNum(1); }}
             >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
+              {label}
+            </Button>
           ))}
-        </div>
+        </Stack>
 
+        <Divider sx={{ mb: 2 }} />
+
+        {/* ── All Employees ─────────────────────────────────────────────── */}
         {activeTab === 'employees' && (
           <>
-            <h2>All Employees ({employeeFrame.shape[0]} rows)</h2>
-            <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-              Sorted client-side by AG Grid. Full dataset loaded.
-            </p>
-            <div className="ag-theme-quartz" style={{ height: 500 }}>
+            <Typography variant="h6" gutterBottom>
+              All Employees <Chip label={`${employeeFrame.shape[0]} rows`} size="small" color="primary" sx={{ ml: 1 }} />
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+              Sorted client-side by AG Grid. Full dataset loaded via <code>to_list()</code>.
+            </Typography>
+            <div style={{ height: 500 }}>
               <AgGridReact
-                rowData={employeeFrame.toArray() as Row[]}
+                theme={gridTheme}
+                rowData={employeeFrame.to_list() as Row[]}
                 columnDefs={empColumns}
-                defaultColDef={{ sortable: true, filter: true, resizable: true, flex: 1, minWidth: 80 }}
-                pagination={true}
+                defaultColDef={{ sortable: true, filter: true, resizable: true, flex: 1 }}
+                pagination
                 paginationPageSize={20}
               />
             </div>
           </>
         )}
 
+        {/* ── Hash-Join ─────────────────────────────────────────────────── */}
         {activeTab === 'joined' && (
           <>
-            <h2>Employees ⟕ Orders (left hash-join on id = employeeId)</h2>
-            <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-              Hash-join O(n+m). {joinedFrame?.shape[0] ?? '…'} joined rows.
-            </p>
-            {joinedFrame && (
-              <div className="ag-theme-quartz" style={{ height: 500 }}>
+            <Typography variant="h6" gutterBottom>
+              Employees ⟕ Orders
+              <Chip label="merge(left_on='id', right_on='employeeId')" size="small" sx={{ ml: 1 }} />
+            </Typography>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Hash-join O(n+m) — not O(n×m). Builds a hash-map of Orders first, then probes with Employees.
+              {joinedFrame && ` Result: ${joinedFrame.shape[0]} rows.`}
+            </Alert>
+            {joinedFrame ? (
+              <div style={{ height: 500 }}>
                 <AgGridReact
-                  rowData={joinedFrame.toArray() as Row[]}
+                  theme={gridTheme}
+                  rowData={joinedFrame.to_list() as Row[]}
                   columnDefs={joinedColumns}
-                  defaultColDef={{ sortable: true, filter: true, resizable: true, flex: 1, minWidth: 80 }}
-                  pagination={true}
+                  defaultColDef={{ sortable: true, filter: true, resizable: true, flex: 1 }}
+                  pagination
                   paginationPageSize={20}
                 />
               </div>
-            )}
+            ) : <CircularProgress />}
           </>
         )}
 
+        {/* ── GroupBy ───────────────────────────────────────────────────── */}
         {activeTab === 'grouped' && (
           <>
-            <h2>GroupBy Department → Sum Salary + Mean Age</h2>
-            {groupedFrame && (
-              <div className="ag-theme-quartz" style={{ height: 400 }}>
+            <Typography variant="h6" gutterBottom>
+              groupby('department') → agg(salary: 'sum', age: 'mean')
+            </Typography>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Multi-level async groupBy with chained aggregation. Sorted by total salary descending via <code>sort_values('salary_sum', false)</code>.
+            </Alert>
+            {groupedFrame ? (
+              <div style={{ height: 400 }}>
                 <AgGridReact
-                  rowData={groupedFrame.toArray() as Row[]}
+                  theme={gridTheme}
+                  rowData={groupedFrame.to_list() as Row[]}
                   columnDefs={groupedColumns}
                   defaultColDef={{ sortable: true, resizable: true, flex: 1 }}
                 />
               </div>
-            )}
+            ) : <CircularProgress />}
           </>
         )}
 
+        {/* ── Filter + Paginate ─────────────────────────────────────────── */}
         {activeTab === 'paginated' && (
           <>
-            <h2>Filter + Sort + Paginate (isoframe-controlled)</h2>
-            <div className="filter-bar">
-              <label>Department:</label>
-              <select value={filterDept} onChange={(e) => { setFilterDept(e.target.value); setPageNum(1); }}>
-                <option value="">All</option>
-                {depts.sort().map((d) => <option key={d}>{d}</option>)}
-              </select>
-              <label>Status:</label>
-              <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPageNum(1); }}>
-                <option value="">All</option>
-                {statuses.map((s) => <option key={s}>{s}</option>)}
-              </select>
-              <label>Sort by:</label>
-              <select value={sortKey} onChange={(e) => setSortKey(e.target.value)}>
-                {['id', 'salary', 'age', 'score', 'joinDate'].map((k) => <option key={k}>{k}</option>)}
-              </select>
-              <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}>
-                <option value="asc">Asc</option>
-                <option value="desc">Desc</option>
-              </select>
-              <span style={{ marginLeft: 'auto', fontSize: '0.85rem', color: '#6b7280' }}>
-                {filteredFrame?.shape[0] ?? 0} rows found
-              </span>
-            </div>
+            <Typography variant="h6" gutterBottom>
+              query() + sort_values() + paginate()
+            </Typography>
+            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" sx={{ mb: 2, gap: 1 }}>
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel>Department</InputLabel>
+                <Select
+                  value={filterDept}
+                  label="Department"
+                  onChange={(e) => { setFilterDept(e.target.value); setPageNum(1); }}
+                >
+                  <MenuItem value="">All</MenuItem>
+                  {depts.map((d) => <MenuItem key={d} value={d}>{d}</MenuItem>)}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" sx={{ minWidth: 130 }}>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={filterStatus}
+                  label="Status"
+                  onChange={(e) => { setFilterStatus(e.target.value); setPageNum(1); }}
+                >
+                  <MenuItem value="">All</MenuItem>
+                  {statuses.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" sx={{ minWidth: 130 }}>
+                <InputLabel>Sort by</InputLabel>
+                <Select value={sortCol} label="Sort by" onChange={(e) => setSortCol(e.target.value)}>
+                  {['id', 'salary', 'age', 'score', 'joinDate'].map((k) => (
+                    <MenuItem key={k} value={k}>{k}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <ButtonGroup size="small">
+                <Button variant={ascending ? 'contained' : 'outlined'} onClick={() => setAscending(true)}>Asc</Button>
+                <Button variant={!ascending ? 'contained' : 'outlined'} onClick={() => setAscending(false)}>Desc</Button>
+              </ButtonGroup>
+
+              {loading && <CircularProgress size={20} />}
+              <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+                {filteredFrame?.shape[0] ?? 0} rows matched
+              </Typography>
+            </Stack>
+
             {paginatedFrame && (
-              <div className="ag-theme-quartz" style={{ height: 450 }}>
+              <div style={{ height: 450 }}>
                 <AgGridReact
-                  rowData={paginatedFrame.toArray() as Row[]}
+                  theme={gridTheme}
+                  rowData={paginatedFrame.to_list() as Row[]}
                   columnDefs={empColumns}
-                  defaultColDef={{ resizable: true, flex: 1, minWidth: 80 }}
-                  suppressMovableColumns={false}
+                  defaultColDef={{ resizable: true, flex: 1 }}
                 />
               </div>
             )}
-            <div className="pagination">
-              <button onClick={() => setPageNum(1)} disabled={pageNum === 1}>«</button>
-              <button onClick={() => setPageNum((p) => Math.max(1, p - 1))} disabled={pageNum === 1}>‹</button>
-              <span>Page {pageNum} of {totalPages}</span>
-              <button onClick={() => setPageNum((p) => Math.min(totalPages, p + 1))} disabled={pageNum === totalPages}>›</button>
-              <button onClick={() => setPageNum(totalPages)} disabled={pageNum === totalPages}>»</button>
-            </div>
+
+            <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center" sx={{ mt: 2 }}>
+              <Button size="small" variant="outlined" onClick={() => setPageNum(1)} disabled={pageNum === 1}>«</Button>
+              <Button size="small" variant="outlined" onClick={() => setPageNum((p) => p - 1)} disabled={pageNum === 1}>‹</Button>
+              <Typography variant="body2">Page {pageNum} of {totalPages}</Typography>
+              <Button size="small" variant="outlined" onClick={() => setPageNum((p) => p + 1)} disabled={pageNum >= totalPages}>›</Button>
+              <Button size="small" variant="outlined" onClick={() => setPageNum(totalPages)} disabled={pageNum >= totalPages}>»</Button>
+            </Stack>
           </>
         )}
 
-        {activeTab === 'csv' && (
-          <CSVTab />
-        )}
-      </div>
-    </div>
+        {/* ── IsoJSON / CSV ─────────────────────────────────────────────── */}
+        {activeTab === 'isojson' && <IsoJsonTab />}
+      </Paper>
+    </Container>
   );
 }
 
-function CSVTab() {
-  const [csvText, setCsvText] = useState(`id,name,dept,salary,joinDate
-1,Alice Smith,Engineering,95000,2021-03-15
-2,Bob Jones,HR,62000,2019-07-22
-3,Carol White,Engineering,112000,2018-01-10
-4,Dave Brown,Sales,78000,2022-11-01
-5,Eve Davis,Marketing,84000,2020-05-30`);
-  const [frame, setFrame] = useState<IIsoFrame | null>(null);
-  const [error, setError] = useState('');
+function IsoJsonTab() {
+  const [csvText, setCsvText] = useState(
+    `id,name,dept,salary,joinDate\n1,Alice Smith,Engineering,95000,2021-03-15\n2,Bob Jones,HR,62000,2019-07-22\n3,Carol White,Engineering,112000,2018-01-10\n4,Dave Brown,Sales,78000,2022-11-01\n5,Eve Davis,Marketing,84000,2020-05-30`,
+  );
+  const [csvFrame, setCsvFrame] = useState<IIsoFrame | null>(null);
+  const [csvError, setCsvError] = useState('');
+
+  const [cosmosJson, setCosmosJson] = useState(
+    JSON.stringify([
+      { id: 'u1', name: 'Alice', address: { city: 'NYC', zip: '10001' }, tags: ['vip', 'gold'], _rid: 'r1', _ts: 1700000000 },
+      { id: 'u2', name: 'Bob', address: { city: 'LA' }, age: 32, _rid: 'r2', _ts: 1700000001 },
+    ], null, 2),
+  );
+  const [cosmosFrame, setCosmosFrame] = useState<IIsoFrame | null>(null);
+  const [cosmosError, setCosmosError] = useState('');
 
   useEffect(() => {
     (async () => {
       try {
         const { parseCSV } = await import('@nice-tools/isocsv');
         const { rows } = parseCSV(csvText);
-        setFrame(new IsoFrame(rows));
-        setError('');
-      } catch (e) {
-        setError(String(e));
-      }
+        setCsvFrame(new IsoFrame(rows));
+        setCsvError('');
+      } catch (e) { setCsvError(String(e)); }
     })();
   }, [csvText]);
 
-  const cols: ColDef[] = frame
-    ? frame.columns.map((c) => ({ field: c, flex: 1 }))
-    : [];
+  useEffect(() => {
+    (async () => {
+      try {
+        const { from_cosmosdb_records } = await import('@nice-tools/isojson');
+        const docs = JSON.parse(cosmosJson);
+        const rows = from_cosmosdb_records(docs);
+        setCosmosFrame(new IsoFrame(rows));
+        setCosmosError('');
+      } catch (e) { setCosmosError(String(e)); }
+    })();
+  }, [cosmosJson]);
+
+  const csvCols: ColDef[] = csvFrame?.columns.map((c) => ({ field: c, flex: 1 })) ?? [];
+  const cosmosCols: ColDef[] = cosmosFrame?.columns.map((c) => ({ field: c, flex: 1, minWidth: 120 })) ?? [];
+
+  const localTheme = themeQuartz.withParams({ fontSize: 13 });
 
   return (
-    <>
-      <h2>CSV → IsoFrame (@nice-tools/isocsv)</h2>
-      <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>Edit the CSV below and see it parsed live.</p>
-      <textarea
-        value={csvText}
-        onChange={(e) => setCsvText(e.target.value)}
-        style={{ width: '100%', height: 160, fontFamily: 'monospace', fontSize: 13, padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: 6 }}
-      />
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {frame && (
-        <>
-          <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-            Shape: {frame.shape[0]} rows × {frame.shape[1]} cols
-          </p>
-          <div className="ag-theme-quartz" style={{ height: 250 }}>
-            <AgGridReact
-              rowData={frame.toArray() as Row[]}
-              columnDefs={cols}
-              defaultColDef={{ sortable: true, filter: true, resizable: true }}
-            />
-          </div>
-        </>
-      )}
-    </>
+    <Stack spacing={3}>
+      {/* CSV */}
+      <Box>
+        <Typography variant="h6" gutterBottom>
+          CSV → IsoFrame <Chip label="@nice-tools/isocsv" size="small" color="secondary" />
+        </Typography>
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+          Edit the CSV below — parsed live, zero dependencies.
+        </Typography>
+        <textarea
+          value={csvText}
+          onChange={(e) => setCsvText(e.target.value)}
+          style={{ width: '100%', height: 130, fontFamily: 'monospace', fontSize: 12, padding: '8px', border: '1px solid #e2e8f0', borderRadius: 8, boxSizing: 'border-box' }}
+        />
+        {csvError && <Alert severity="error" sx={{ mt: 1 }}>{csvError}</Alert>}
+        {csvFrame && (
+          <>
+            <Typography variant="caption" color="text.secondary">
+              Shape: {csvFrame.shape[0]} × {csvFrame.shape[1]}
+            </Typography>
+            <div style={{ height: 240, marginTop: 8 }}>
+              <AgGridReact theme={localTheme} rowData={csvFrame.to_list() as Row[]} columnDefs={csvCols} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
+            </div>
+          </>
+        )}
+      </Box>
+
+      <Divider />
+
+      {/* CosmosDB JSON */}
+      <Box>
+        <Typography variant="h6" gutterBottom>
+          CosmosDB JSON → IsoFrame <Chip label="@nice-tools/isojson" size="small" color="secondary" />
+        </Typography>
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+          Paste CosmosDB documents. System fields (_rid, _ts, etc.) are stripped. Nested objects are flattened with dot-notation.
+        </Typography>
+        <textarea
+          value={cosmosJson}
+          onChange={(e) => setCosmosJson(e.target.value)}
+          style={{ width: '100%', height: 180, fontFamily: 'monospace', fontSize: 12, padding: '8px', border: '1px solid #e2e8f0', borderRadius: 8, boxSizing: 'border-box' }}
+        />
+        {cosmosError && <Alert severity="error" sx={{ mt: 1 }}>{cosmosError}</Alert>}
+        {cosmosFrame && (
+          <>
+            <Typography variant="caption" color="text.secondary">
+              Shape: {cosmosFrame.shape[0]} × {cosmosFrame.shape[1]} — columns: {cosmosFrame.columns.join(', ')}
+            </Typography>
+            <div style={{ height: 200, marginTop: 8 }}>
+              <AgGridReact theme={localTheme} rowData={cosmosFrame.to_list() as Row[]} columnDefs={cosmosCols} defaultColDef={{ sortable: true, resizable: true }} />
+            </div>
+          </>
+        )}
+      </Box>
+    </Stack>
   );
 }

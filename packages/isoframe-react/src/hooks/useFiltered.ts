@@ -15,7 +15,7 @@ export function useFiltered(
     }
     let cancelled = false;
     setLoading(true);
-    frame.where(predicate).then((result) => {
+    frame.query(predicate).then((result) => {
       if (!cancelled) {
         setFiltered(result);
         setLoading(false);

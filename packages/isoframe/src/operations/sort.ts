@@ -1,4 +1,6 @@
-import { Row, Scalar, SortOrder } from '../types';
+import { Row, Scalar } from '../types';
+
+type SortOrder = 'asc' | 'desc';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}(T[\d:.Z+-]*)?$/;
 

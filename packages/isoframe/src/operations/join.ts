@@ -1,4 +1,4 @@
-import { JoinType, Row, Scalar } from '../types';
+import { MergeHow, Row, Scalar } from '../types';
 
 /**
  * Hash-Join — O(n+m) not O(n*m).
@@ -9,7 +9,7 @@ export async function hashJoin(
   otherRows: ReadonlyArray<Row>,
   primaryKey: string,
   foreignKey: string,
-  type: JoinType = 'left',
+  type: MergeHow = 'left',
 ): Promise<Row[]> {
   // Phase 1: Build hash map of other (O(m))
   const hashMap = new Map<Scalar, Row[]>();

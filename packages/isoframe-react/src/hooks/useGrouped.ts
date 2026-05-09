@@ -16,7 +16,7 @@ export function useGrouped(
     }
     let cancelled = false;
     setLoading(true);
-    frame.groupBy(keys).then((g) => {
+    frame.groupby(keys).then((g) => {
       if (!cancelled) {
         setGrouped(g);
         setLoading(false);
