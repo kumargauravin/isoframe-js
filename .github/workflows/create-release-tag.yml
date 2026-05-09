@@ -1,0 +1,52 @@
+name: Create Release Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 1.0.0)'
+        required: true
+        default: '1.0.0'
+      release_notes:
+        description: 'Release notes'
+        required: false
+        default: 'New release'
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version in all packages
+        run: |
+          for pkg in packages/isoframe packages/isocsv packages/isojson packages/isoframe-react; do
+            (cd "$pkg" && npm version ${{ github.event.inputs.version }} --no-git-tag-version)
+            git add "$pkg/package.json"
+          done
+          git commit -m "chore: bump version to ${{ github.event.inputs.version }}"
+          git push origin main
+
+      - name: Create and push tag
+        run: |
+          git tag v${{ github.event.inputs.version }}
+          git push origin v${{ github.event.inputs.version }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: v${{ github.event.inputs.version }}
+          body: ${{ github.event.inputs.release_notes }}
+          draft: false
+          prerelease: false
