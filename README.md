@@ -65,6 +65,21 @@ npm run demo         # start Next.js demo on http://localhost:3000
 
 ---
 
+## CI/CD Workflows
+
+- `ci.yml`: runs lint, build, and tests on pushes/PRs to `main` (Node.js 22, `npm ci`).
+- `create-release-tag.yml`: bumps versions across all publishable packages (`isoframe`, `isocsv`, `isojson`, `isoframe-react`) and creates a release tag.
+- `publish-npm.yml`: publishes via the local custom action at `.github/actions/publish-modules`, with workflow dispatch and tag-based publish support.
+- `trigger-deploy.yml`: triggers `deploy-pages.yml` after successful npm publish completion (or manually via dispatch).
+- `deploy-pages.yml`: builds and deploys `apps/demo-react` static output to GitHub Pages.
+
+### Notes on sync with `fake-llm`
+
+- `isoframe-js` intentionally uses Node.js 22 + `npm ci`; `fake-llm` remains on Node.js 20 + `npm install --legacy-peer-deps`.
+- `isoframe-js` release tagging is multi-package; `fake-llm` uses a single-package version bump flow.
+
+---
+
 ## `@nice-tools/isoframe` API
 
 ### Constructor
