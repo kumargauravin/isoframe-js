@@ -43,7 +43,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.lib.json && tsc -p tsconfig.cjs.json",
     "test": "vitest run",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src"
   },
   "devDependencies": {
     "vitest": "^2.0.0"

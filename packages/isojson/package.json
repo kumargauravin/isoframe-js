@@ -32,6 +32,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsc -p tsconfig.lib.json && tsc -p tsconfig.cjs.json",
+    "lint": "eslint src",
     "test": "vitest run"
   },
   "devDependencies": {

@@ -1,0 +1,43 @@
+name: Trigger Pages Redeploy After npm Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual redeploy'
+        required: false
+        default: 'Manual redeploy triggered'
+  workflow_run:
+    workflows:
+      - 'Publish @nice-tools packages to npm'
+    types:
+      - completed
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  redeploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log trigger reason
+        run: |
+          echo "Redeploy triggered."
+          echo "Reason: ${{ github.event.inputs.reason || 'npm publish succeeded' }}"
+
+      - name: Trigger GitHub Pages deploy
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy-pages.yml',
+              ref: 'main'
+            });
+            console.log('deploy-pages.yml dispatched successfully.');

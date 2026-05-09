@@ -20,6 +20,13 @@
     "react": "^19.0.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.lib.json && tsc -p tsconfig.cjs.json"
+    "build": "tsc -p tsconfig.lib.json && tsc -p tsconfig.cjs.json",
+    "test": "vitest run",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "happy-dom": "^20.8.9",
+    "vitest": "^2.0.0"
   }
 }
