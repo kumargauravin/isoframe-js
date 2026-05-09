@@ -1,0 +1,64 @@
+name: Publish workspace modules
+description: Publish @nice-tools workspace packages to npm when versions are not yet published
+inputs:
+  npm-token:
+    description: npm token with publish permissions
+    required: true
+  node-version:
+    description: Node.js version to use
+    required: false
+    default: '22'
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        registry-url: https://registry.npmjs.org
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
+
+    - name: Build libraries
+      shell: bash
+      run: npx nx run-many --target=build --projects=@nice-tools/isoframe,@nice-tools/isocsv,@nice-tools/isojson,@nice-tools/isoframe-react
+
+    - name: Publish packages if needed
+      shell: bash
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-token }}
+      run: |
+        set -euo pipefail
+
+        packages=(
+          "packages/isoframe"
+          "packages/isocsv"
+          "packages/isojson"
+          "packages/isoframe-react"
+        )
+
+        for pkg_dir in "${packages[@]}"; do
+          name="$(node -p "require('./${pkg_dir}/package.json').name")"
+          version="$(node -p "require('./${pkg_dir}/package.json').version")"
+
+          set +e
+          view_output="$(npm view "${name}@${version}" version 2>&1)"
+          view_status=$?
+          set -e
+
+          if [ "$view_status" -eq 0 ]; then
+            echo "Skipping ${name}@${version}; already published."
+            continue
+          fi
+
+          if ! grep -Eqi "(E404|404 Not Found|is not in this registry)" <<<"${view_output}"; then
+            echo "Failed to verify ${name}@${version} in npm registry."
+            echo "${view_output}"
+            exit 1
+          fi
+
+          echo "Publishing ${name}@${version}"
+          npm publish "./${pkg_dir}" --access public --provenance
+        done
