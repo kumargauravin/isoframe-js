@@ -13,6 +13,7 @@ jobs:
       contents: write
       actions: write
       id-token: write
+      actions: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,6 +25,8 @@ jobs:
         uses: ./.github/actions/publish-modules
         with:
           npm-token: ${{ secrets.NPM_TOKEN }}
+          node-version: '22'
+          packages: '["packages/isoframe","packages/isocsv","packages/isojson","packages/isoframe-react"]'
 
       - name: Skip publish (missing NPM_TOKEN)
         if: ${{ !secrets.NPM_TOKEN }}
@@ -52,10 +55,13 @@ jobs:
               await github.rest.actions.createWorkflowDispatch({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                workflow_id: 'deploy-pages.yml',
-                ref: 'main'
+                workflow_id: 'trigger-deploy.yml',
+                ref: 'main',
+                inputs: {
+                  reason: 'Triggered after npm publish workflow'
+                }
               });
-              console.log('GitHub Pages redeploy triggered successfully.');
+              console.log('Trigger-deploy workflow dispatched successfully.');
             } catch (e) {
-              console.log('Could not trigger Pages redeploy:', e.message);
+              console.log('Could not trigger deploy workflow:', e.message);
             }

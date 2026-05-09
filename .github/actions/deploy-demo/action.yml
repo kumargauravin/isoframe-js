@@ -1,0 +1,94 @@
+name: Deploy demo
+description: Build and prepare one demo app artifact from the apps workspace
+inputs:
+  demo-name:
+    description: Demo app folder name under apps/
+    required: true
+  build-command:
+    description: npm script name to run in the demo workspace
+    required: false
+    default: build
+  output-path:
+    description: Output path for built files
+    required: true
+  node-version:
+    description: Node.js version to use
+    required: false
+    default: '22'
+  base-path:
+    description: Base path for framework builds that support it
+    required: false
+    default: ''
+  workspace-name:
+    description: npm workspace name
+    required: true
+  install-command:
+    description: Dependency install command
+    required: false
+    default: npm ci
+  build-packages-command:
+    description: Command to build library packages before demo build (leave empty to skip)
+    required: false
+    default: ''
+outputs:
+  artifact-path:
+    description: Built artifact path for upload
+    value: ${{ steps.finalize.outputs.artifact-path }}
+  skipped:
+    description: Whether demo build was skipped because the demo workspace is unavailable
+    value: ${{ steps.detect.outputs.skipped }}
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+        cache-dependency-path: package-lock.json
+
+    - name: Install dependencies
+      shell: bash
+      run: ${{ inputs.install-command }}
+
+    - name: Detect demo workspace
+      id: detect
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -f "apps/${{ inputs.demo-name }}/package.json" ]; then
+          echo "skipped=false" >> "$GITHUB_OUTPUT"
+          echo "Demo found: apps/${{ inputs.demo-name }}"
+        else
+          echo "skipped=true" >> "$GITHUB_OUTPUT"
+          echo "Demo not found: apps/${{ inputs.demo-name }} (skipping)."
+        fi
+
+    - name: Build packages
+      if: steps.detect.outputs.skipped == 'false' && inputs.build-packages-command != ''
+      shell: bash
+      run: ${{ inputs.build-packages-command }}
+
+    - name: Build demo
+      if: steps.detect.outputs.skipped == 'false'
+      shell: bash
+      env:
+        NEXT_PUBLIC_BASE_PATH: ${{ inputs.base-path }}
+      run: npm run ${{ inputs.build-command }} --workspace ${{ inputs.workspace-name }}
+
+    - name: Finalize outputs
+      id: finalize
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ "${{ steps.detect.outputs.skipped }}" = "true" ]; then
+          echo "artifact-path=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        if [ ! -d "${{ inputs.output-path }}" ]; then
+          echo "Expected output path not found: ${{ inputs.output-path }}"
+          exit 1
+        fi
+
+        echo "artifact-path=${{ inputs.output-path }}" >> "$GITHUB_OUTPUT"

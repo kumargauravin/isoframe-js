@@ -1,5 +1,5 @@
 name: Publish workspace modules
-description: Publish @nice-tools workspace packages to npm when versions are not yet published
+description: Publish one or more npm workspace packages when versions are not yet available in the registry
 inputs:
   npm-token:
     description: npm token with publish permissions
@@ -8,6 +8,22 @@ inputs:
     description: Node.js version to use
     required: false
     default: '22'
+  packages:
+    description: JSON array of package paths to publish
+    required: false
+    default: '["packages/isoframe","packages/isocsv","packages/isojson","packages/isoframe-react"]'
+  registry-url:
+    description: npm registry URL
+    required: false
+    default: https://registry.npmjs.org
+  install-command:
+    description: Dependency install command
+    required: false
+    default: npm ci
+  build-command:
+    description: Build command to run before publish (leave empty to skip)
+    required: false
+    default: npx nx run-many --target=build --projects=@nice-tools/isoframe,@nice-tools/isocsv,@nice-tools/isojson,@nice-tools/isoframe-react
 runs:
   using: composite
   steps:
@@ -15,36 +31,53 @@ runs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
-        registry-url: https://registry.npmjs.org
+        registry-url: ${{ inputs.registry-url }}
 
     - name: Install dependencies
       shell: bash
-      run: npm ci
+      run: ${{ inputs.install-command }}
 
-    - name: Build libraries
+    - name: Build packages
+      if: inputs.build-command != ''
       shell: bash
-      run: npx nx run-many --target=build --projects=@nice-tools/isoframe,@nice-tools/isocsv,@nice-tools/isojson,@nice-tools/isoframe-react
+      run: ${{ inputs.build-command }}
 
     - name: Publish packages if needed
       shell: bash
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-token }}
+        PACKAGES_JSON: ${{ inputs.packages }}
+        REGISTRY_URL: ${{ inputs.registry-url }}
       run: |
         set -euo pipefail
 
-        packages=(
-          "packages/isoframe"
-          "packages/isocsv"
-          "packages/isojson"
-          "packages/isoframe-react"
+        mapfile -t packages < <(node <<'NODE'
+        const value = JSON.parse(process.env.PACKAGES_JSON);
+
+        if (!Array.isArray(value)) {
+          throw new Error("Invalid 'packages' input: expected a JSON array of package paths");
+        }
+
+        for (const item of value) {
+          if (typeof item !== 'string' || !item.trim()) {
+            throw new Error("Invalid 'packages' input: each package path must be a non-empty string");
+          }
+          console.log(item);
+        }
+        NODE
         )
 
         for pkg_dir in "${packages[@]}"; do
+          if [ ! -f "./${pkg_dir}/package.json" ]; then
+            echo "Skipping ${pkg_dir}; package.json not found."
+            continue
+          fi
+
           name="$(node -p "require('./${pkg_dir}/package.json').name")"
           version="$(node -p "require('./${pkg_dir}/package.json').version")"
 
           set +e
-          view_output="$(npm view "${name}@${version}" version 2>&1)"
+          view_output="$(npm view "${name}@${version}" version --registry "${REGISTRY_URL}" 2>&1)"
           view_status=$?
           set -e
 
@@ -60,5 +93,5 @@ runs:
           fi
 
           echo "Publishing ${name}@${version}"
-          npm publish "./${pkg_dir}" --access public --provenance
+          npm publish "./${pkg_dir}" --access public --provenance --registry "${REGISTRY_URL}"
         done

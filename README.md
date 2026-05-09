@@ -54,6 +54,12 @@ isoframe-js/                  ← NX monorepo root
 
 ---
 
+## Workflow Docs
+
+- [GitHub Workflows and Custom Actions](WORKFLOWS.md)
+
+---
+
 ## Quick Start
 
 ```bash
