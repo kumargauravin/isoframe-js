@@ -128,7 +128,7 @@ df.fillna({ salary: 0, name: 'Unknown' })  // fill per column
 ### Async Operations (non-blocking)
 
 ```ts
-// Filter — yields control every 50 000 rows
+// Filter — chunked processing (chunk size 5 000); yields to event loop for datasets > 50 000 rows
 const engineers = await df.query(row => row.dept === 'Eng');
 
 // Hash-Join O(n+m)

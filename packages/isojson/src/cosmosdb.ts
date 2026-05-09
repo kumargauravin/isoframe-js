@@ -5,7 +5,7 @@ const COSMOS_SYSTEM_FIELDS = new Set(['_rid', '_self', '_etag', '_attachments', 
 
 /**
  * Process a single CosmosDB document:
- * 1. Strip system fields (_rid, _self, _etag, etc.)
+ * 1. Strip system fields (_rid, _self, _etag, _attachments, _ts, _lsn)
  * 2. Flatten nested structure
  */
 export function from_cosmosdb(doc: JsonObject, options: CosmosOptions = {}): FlatRow {

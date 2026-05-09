@@ -22,6 +22,11 @@
       "import": "./dist/esm/coerce.js",
       "require": "./dist/cjs/coerce.js",
       "types": "./dist/types/coerce.d.ts"
+    },
+    "./cosmosdb": {
+      "import": "./dist/esm/cosmosdb.js",
+      "require": "./dist/cjs/cosmosdb.js",
+      "types": "./dist/types/cosmosdb.d.ts"
     }
   },
   "sideEffects": false,

@@ -34,7 +34,7 @@ export function generateEmployees(n = 200) {
       yearsExp: rndInt(0, 30),
       status: rnd(STATUS),
       joinDate: rndDate(new Date('2015-01-01'), new Date('2024-12-31')),
-      score: Math.round(Math.random() * 100 * 10) / 10,
+      score: Math.round(Math.random() * 100 * 10) / 10, // lgtm[js/insecure-randomness] — demo data only
     });
   }
   return rows;
@@ -46,7 +46,7 @@ export function generateOrders(n = 300) {
   for (let i = 1; i <= n; i++) {
     rows.push({
       orderId: i,
-      employeeId: rndInt(1, 200),
+      employeeId: rndInt(1, 200), // lgtm[js/insecure-randomness] — demo data only
       product: rnd(products),
       quantity: rndInt(1, 50),
       unitPrice: rndInt(10, 500),
