@@ -1,7 +1,6 @@
-import { Row, Scalar } from '@nice-tools/isoframe';
-import { ParseOptions, ParseResult } from './types';
+import { CsvRow, CsvScalar, ParseOptions, ParseResult } from './types';
 
-function tryNumber(s: string): Scalar {
+function tryNumber(s: string): CsvScalar {
   if (s === '') return null;
   const n = Number(s);
   return isNaN(n) ? s : n;
@@ -59,7 +58,7 @@ export function parseCSV(text: string, options: ParseOptions = {}): ParseResult 
 
   const errors: string[] = [];
   const lines = text.split(/\r?\n/);
-  const result: Row[] = [];
+  const result: CsvRow[] = [];
   let cols: string[] = [];
   let startLine = 0;
 
@@ -97,26 +96,26 @@ export function parseCSV(text: string, options: ParseOptions = {}): ParseResult 
       errors.push(`Line ${originalLineNum}: expected ${cols.length} fields, got ${fields.length}`);
     }
 
-    const row: Row = {};
+    const row: CsvRow = {};
     for (let j = 0; j < cols.length; j++) {
       const raw = fields[j] ?? '';
       const trimmed = raw.trim();
       if (trimmed === '') {
-        row[cols[j]] = emptyValue as Scalar;
+        row[cols[j]] = emptyValue as CsvScalar;
       } else {
         row[cols[j]] = inferTypes ? tryNumber(trimmed) : trimmed;
       }
     }
-    result.push(Object.freeze(row) as Row);
+    result.push(Object.freeze(row) as CsvRow);
   }
 
   return { rows: result, columns: cols, errors };
 }
 
-export function stringifyCSV(rows: Row[], columns?: string[], delimiter = ','): string {
+export function stringifyCSV(rows: CsvRow[], columns?: string[], delimiter = ','): string {
   if (rows.length === 0) return '';
   const cols = columns ?? Object.keys(rows[0]);
-  const escape = (v: Scalar): string => {
+  const escape = (v: CsvScalar): string => {
     if (v === null || v === undefined) return '';
     const s = String(v);
     if (s.includes(delimiter) || s.includes('"') || s.includes('\n')) {
@@ -126,7 +125,7 @@ export function stringifyCSV(rows: Row[], columns?: string[], delimiter = ','): 
   };
   const lines = [cols.join(delimiter)];
   for (const row of rows) {
-    lines.push(cols.map((c) => escape(row[c] as Scalar)).join(delimiter));
+    lines.push(cols.map((c) => escape(row[c] as CsvScalar)).join(delimiter));
   }
   return lines.join('\n');
 }

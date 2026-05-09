@@ -1,4 +1,8 @@
-import { Row } from '@nice-tools/isoframe';
+/** Scalar cell value — compatible with @nice-tools/isoframe Scalar */
+export type CsvScalar = string | number | boolean | null;
+
+/** A parsed row — compatible with @nice-tools/isoframe Row */
+export type CsvRow = Record<string, CsvScalar>;
 
 export interface ParseOptions {
   /** Column delimiter (default: ',') */
@@ -18,7 +22,7 @@ export interface ParseOptions {
 }
 
 export interface ParseResult {
-  rows: Row[];
+  rows: CsvRow[];
   columns: string[];
   errors: string[];
 }
